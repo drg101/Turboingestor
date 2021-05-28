@@ -1,8 +1,11 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
+import { init, done } from './lib/mongoBindings'
 
 
 (async () => {
+    await init();
+
     const { format, filepath, indexes } = await yargs(process.argv.slice(2)).array('indexes').options({
         format: { type: 'string', requiresArg: true, default: "census" },
         filepath: { type: 'string', requiresArg: true, demandOption: true },
@@ -11,9 +14,11 @@ import ingestCensus from './lib/ingestCensus';
 
 
 
-    switch(format){
+    switch (format) {
         case "census":
             ingestCensus(filepath, indexes);
             break;
     }
+
+    done();
 })();

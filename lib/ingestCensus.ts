@@ -1,4 +1,4 @@
-
+import { getFieldsAndValidateCSV } from './util';
 
 export default function ingestCensus(filepath: string, indexes: string[]) {
     if (!indexes.length) {
@@ -6,5 +6,5 @@ export default function ingestCensus(filepath: string, indexes: string[]) {
     }
     console.log(`Ingesting ${filepath} as a census table. Indexing on [${indexes}]`);
 
-    
+
 }
