@@ -18,7 +18,9 @@
   },
   "homepage": "https://github.com/drg101/turboingestor#readme",
   "dependencies": {
+    "@types/mongodb": "^3.6.16",
     "@types/yargs": "^17.0.0",
+    "mongodb": "^3.6.9",
     "yargs": "^17.0.1"
   },
   "devDependencies": {

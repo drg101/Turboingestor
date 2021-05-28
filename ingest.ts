@@ -1,13 +1,19 @@
 import yargs = require('yargs/yargs');
+import ingestCensus from './lib/ingestCensus';
 
 
 (async () => {
-    const argv = await yargs(process.argv.slice(2)).options({
-        format: { type: 'string' },
+    const { format, filepath, indexes } = await yargs(process.argv.slice(2)).array('indexes').options({
+        format: { type: 'string', requiresArg: true, default: "census" },
+        filepath: { type: 'string', requiresArg: true, demandOption: true },
+        indexes: { type: 'array', requiresArg: true, default: [] }
     }).argv;
 
-    switch(argv.format){
+
+
+    switch(format){
         case "census":
+            ingestCensus(filepath, indexes);
             break;
     }
 })();
