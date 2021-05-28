@@ -1,0 +1,19 @@
+{
+  "name": "turboingestor",
+  "version": "1.0.0",
+  "description": "Ingest datasets into the sustain ecosystem in a general fashion.",
+  "main": "ingest.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drg101/turboingestor.git"
+  },
+  "author": "Daniel Reynolds",
+  "license": "SEE LICENCE IN ./LICENCE",
+  "bugs": {
+    "url": "https://github.com/drg101/turboingestor/issues"
+  },
+  "homepage": "https://github.com/drg101/turboingestor#readme"
+}
