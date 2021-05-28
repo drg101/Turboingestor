@@ -2,25 +2,32 @@ import mongodb = require('mongodb');
 import assert = require('assert');
 const { MongoClient } = mongodb;
 import { dbname, dbport } from './constants';
+import { execCommand } from './util';
 const url = `mongodb://localhost:${dbport}`;
 
-let db: mongodb.Db;
-let mclient: mongodb.MongoClient;
-export const init = async () => {
-    return new Promise<void>(resolve => {
-        MongoClient.connect(url, function (err, client) {
-            mclient = client;
-            console.log('Connected successfully to the mongo router');
-            db = client.db(dbname);
-            console.log(`Connected to ${dbname}`)
-            resolve();
-        });
+
+
+export const importCSV = async (collectionName: string, pathToCSV: string) => {
+    await execCommand(`mongoimport --type csv -d ${dbname} -c ${collectionName} --file ${pathToCSV} --headerline`);
+}
+
+export const createIndexes = async (collectionName: string, indexes: string[]) => {
+    const mongoIndexes = indexes.map(index => {
+        return {
+            key: {
+                [ index ]: 1
+            },
+            name: index
+        }
+    });
+
+    MongoClient.connect(url, async function (err, client) {
+        if (err) {
+            throw `Error connecting to mongodb @${url}`
+        };
+        const db = client.db(dbname);
+        await db.collection(collectionName).createIndexes(mongoIndexes);
+        client.close();
     });
 }
-
-export const done = () => {
-    mclient.close();
-}
-
-
 

@@ -1,7 +1,8 @@
 import { getFieldsAndValidateCSV } from './util';
+import { importCSV, createIndexes } from './mongoBindings'  
 import assert = require('assert');
 
-export default async function ingestCensus(filepath: string, indexes: string[]) {
+export default async function ingestCensus(collectionName: string, filepath: string, indexes: string[]) {
     if (!indexes.length) {
         indexes = [ 'GISJOIN' ];
     }
@@ -12,5 +13,6 @@ export default async function ingestCensus(filepath: string, indexes: string[]) 
         assert(fieldsInCSV.includes(index), "Specified index is not in dataset!!!")
     }
     
-
+    await importCSV(collectionName, filepath);
+    await createIndexes(collectionName, indexes)
 }
