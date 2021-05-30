@@ -8,7 +8,7 @@ const url = `mongodb://localhost:${dbport}`;
 
 
 export const importCSV = async (collectionName: string, pathToCSV: string) => {
-    await execCommand(`mongoimport --type csv -d ${dbname} -c ${collectionName} --file ${pathToCSV} --headerline`);
+    await execCommand(`mongoimport --port ${dbport} --type csv -d ${dbname} -c ${collectionName} --file ${pathToCSV} --headerline`);
 }
 
 export const createIndexes = async (collectionName: string, indexes: string[]) => {
