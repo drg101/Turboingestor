@@ -17,11 +17,10 @@ import { exportLabelMap } from './lib/util'
     switch (format) {
         case "census_w_descriptive_header":
             await exportLabelMap(filepath, name);
+            //yes, this is supposed to fallthrough.
         case "census":
-            console.log("fallthrough")
             ingestCensus(name, filepath, indexes);
             break;
-
     }
 
 })();
