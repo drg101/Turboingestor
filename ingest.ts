@@ -1,5 +1,6 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
+import { popDescriptiveHeaderIntoLabelMap } from './lib/util' 
 
 
 (async () => {
@@ -14,9 +15,13 @@ import ingestCensus from './lib/ingestCensus';
 
 
     switch (format) {
+        case "census_w_descriptive_header":
+
+            //allow fallthrough:
         case "census":
             ingestCensus(name, filepath, indexes);
             break;
+
     }
 
 })();

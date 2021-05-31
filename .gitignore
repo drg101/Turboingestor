@@ -106,3 +106,4 @@ dist
 build/
 raw_data/
 MetadataCatalog/
+out/

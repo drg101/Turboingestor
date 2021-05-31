@@ -1,5 +1,6 @@
 import csv = require('csv-parser');
 import fs = require('fs');
+import readline = require('readline');
 import { exec } from 'child_process';
 
 export const getFieldsAndValidateCSV = (path: string) => {
@@ -37,4 +38,29 @@ export const execCommand = async (cmd: string) => {
             resolve(true);
         });
     })
+}
+
+export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
+    const fileStream = fs.createReadStream(pathToCSV);
+    const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity
+    });
+
+    let lineNum = 0;
+    let lineArrs: string[][] = [];
+    for await (const line of rl) {
+        if(lineNum < 2){
+            lineArrs.push(line.split(','));
+        }
+        else{
+            break;
+        }
+        lineNum++;
+    }
+
+    return lineArrs[0].reduce((acc, curr, index) => {
+        acc[curr] = lineArrs[1][index];
+        return acc;
+    }, {});
 }
