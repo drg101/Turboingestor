@@ -1,4 +1,5 @@
 #! /bin/bash
+set -e
 
 mongoport="27017"
 mongohost="lattice-46"

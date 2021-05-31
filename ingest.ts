@@ -1,6 +1,6 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
-import { popDescriptiveHeaderIntoLabelMap } from './lib/util' 
+import { exportLabelMap } from './lib/util' 
 
 
 (async () => {
@@ -16,9 +16,9 @@ import { popDescriptiveHeaderIntoLabelMap } from './lib/util'
 
     switch (format) {
         case "census_w_descriptive_header":
-
-            //allow fallthrough:
+            await exportLabelMap(filepath, name);
         case "census":
+            console.log("fallthrough")
             ingestCensus(name, filepath, indexes);
             break;
 

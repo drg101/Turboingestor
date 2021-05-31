@@ -40,6 +40,23 @@ export const execCommand = async (cmd: string) => {
     })
 }
 
+export const exportLabelMap = async (pathToCSV: string, name: string = "defaultName") => {
+    console.log(`Creating label map for ${pathToCSV}`)
+    const labelMap = await popDescriptiveHeaderIntoLabelMap(pathToCSV);
+    console.log(labelMap)
+    fs.writeFile(`./out/${name}LabelMap.json`, JSON.stringify(labelMap, null, 4), err => {
+        if (err) {
+            console.error(err);
+            throw "Bad Label map write!";
+        }
+        console.log(`Sucessfully created label map for ${pathToCSV}`)
+    })
+}
+
+interface labelMap {
+    [elementName: string]: string;
+}
+
 export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
     const fileStream = fs.createReadStream(pathToCSV);
     const rl = readline.createInterface({
@@ -58,9 +75,18 @@ export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
         }
         lineNum++;
     }
+    console.log(`Got label map values for ${pathToCSV}`)
 
-    return lineArrs[0].reduce((acc, curr, index) => {
+    //TODO: make this use a stream cause this is gross
+    console.log(`Copying old file before pop.`)
+    fs.copyFileSync(pathToCSV,`${pathToCSV}_WITH_DESCRIPTIVE_HEADERS`);
+    let CSVContent = fs.readFileSync(pathToCSV).toString().split('\n'); // read file and convert to array by line break
+    CSVContent.splice(1,1);
+    fs.writeFileSync(pathToCSV, CSVContent.join('\n'));
+    console.log(`Removed descriptive header for ${pathToCSV}!`)
+
+    return lineArrs[0].reduce((acc: labelMap, curr, index) => {
         acc[curr] = lineArrs[1][index];
         return acc;
-    }, {});
+    }, {}) as labelMap;
 }

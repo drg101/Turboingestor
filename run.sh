@@ -1,4 +1,5 @@
 #! /bin/bash
+set -e
 npm run build
 echo Name = $1
 echo Format = $2
