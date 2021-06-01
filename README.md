@@ -9,7 +9,7 @@ General dataset ingestion for the Sustain ecosystem.
 3. Download whatever data you are importing into some directory.
 
 #### Running
-`./run.sh <name_of_new_collection> <data_format> <filepath> <indexes>`, wherein:
+`./run.sh <name_of_new_collection> <data_format> <filepath> <indexes> [-n]`, wherein:
 ##### `name_of_new_collection`
 Name of the new collection you are creating within mongodb.
 ##### `data_format`
@@ -19,5 +19,8 @@ Format of data you are ingesting. Accepted values are:
 Path to whatever file you are ingesting.
 ##### `indexes`
 Space seperated string of indexes to create.
+##### `-n` (optional)
+Don't re-build. Useful when not developing.
+
 ##### Example:
 `./run.sh county_race census ./path/to/censuscsv.csv "GISJOIN index2 index3"`
