@@ -58,35 +58,15 @@ interface labelMap {
 }
 
 export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
-    const fileStream = fs.createReadStream(pathToCSV);
-    const rl = readline.createInterface({
-        input: fileStream,
-        crlfDelay: Infinity
-    });
-
-    let lineNum = 0;
-    let lineArrs: string[][] = [];
-    for await (const line of rl) {
-        if(lineNum < 2){
-            lineArrs.push(line.split(','));
-        }
-        else{
-            break;
-        }
-        lineNum++;
-    }
-    console.log(`Got label map values for ${pathToCSV}`)
-
-    //TODO: make this use a stream cause this is gross
-    console.log(`Copying old file before pop.`)
-    fs.copyFileSync(pathToCSV,`${pathToCSV}_WITH_DESCRIPTIVE_HEADERS`);
-    let CSVContent = fs.readFileSync(pathToCSV).toString().split('\n'); // read file and convert to array by line break
+    const newFileName = `${pathToCSV.substr(0,pathToCSV.length-3)}_WITH_DESCRIPTIVE_HEADERS.csv`
+    fs.copyFileSync(pathToCSV, newFileName);
+    let CSVContent = fs.readFileSync(newFileName).toString().split('\n'); // read file and convert to array by line break
     CSVContent.splice(1,1);
     fs.writeFileSync(pathToCSV, CSVContent.join('\n'));
-    console.log(`Removed descriptive header for ${pathToCSV}!`)
 
-    return lineArrs[0].reduce((acc: labelMap, curr, index) => {
-        acc[curr] = lineArrs[1][index];
-        return acc;
-    }, {}) as labelMap;
+    return new Promise(resolve => {
+        const readStream = fs.createReadStream(newFileName)
+                .pipe(csv())
+                .on('data', (data) => { readStream.destroy(); resolve(data);  })
+    })
 }
