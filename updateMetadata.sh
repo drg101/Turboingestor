@@ -8,7 +8,6 @@ collection="Metadata"
 propertiesfile="config.properties"
 
 cd MetadataCatalog
-
 sed -i "s/^mongodb.host=.*$/mongodb.host=$mongohost/" $propertiesfile
 sed -i "s/^mongodb.port=.*$/mongodb.port=$mongoport/" $propertiesfile
 sed -i "s/^mongodb.db=.*$/mongodb.db=$mongodb/" $propertiesfile

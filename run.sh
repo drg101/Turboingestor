@@ -1,6 +1,28 @@
 #! /bin/bash
 set -e
 
+if [ -z $4 ] 
+then
+    echo "Not enough parameters! Exiting."
+    exit 1
+fi
+
+NOBUILD=false
+
+if [[ $* == *-n* ]]
+then
+    echo "No build flag detected, not rebuilding."
+        NOBUILD=true
+fi
+
+if [ "$NOBUILD" = false ]
+then
+    echo "Building stuff."
+    ./build.sh
+    echo
+fi
+
+
 echo Name = $1
 echo Format = $2
 echo Filepath = $3
