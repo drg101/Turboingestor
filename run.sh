@@ -7,21 +7,14 @@ then
     exit 1
 fi
 
-NOBUILD=false
-
 if [[ $* == *-n* ]]
 then
     echo "No build flag detected, not rebuilding."
-        NOBUILD=true
-fi
-
-if [ "$NOBUILD" = false ]
-then
+else
     echo "Building stuff."
     ./build.sh
     echo
 fi
-
 
 echo Name = $1
 echo Format = $2
