@@ -53,10 +53,6 @@ export const exportLabelMap = async (pathToCSV: string, name: string = "defaultN
     })
 }
 
-interface labelMap {
-    [elementName: string]: string;
-}
-
 export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
     const newFileName = `${pathToCSV.substr(0,pathToCSV.length-3)}_WITH_DESCRIPTIVE_HEADERS.csv`
     fs.copyFileSync(pathToCSV, newFileName);
