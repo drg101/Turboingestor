@@ -14,7 +14,8 @@ General dataset ingestion for the Sustain ecosystem.
 Name of the new collection you are creating within mongodb.
 ##### `data_format`
 Format of data you are ingesting. Accepted values are:
-- `census`, format downloaded from nhgis.org
+- `census`, format downloaded from nhgis.org, csv format, one header line.
+- `census_w_descriptive_header`, format downloaded from nhgis.org, csv format, two header lines. This will make a file in `out/` which maps the first header to the descriptive one. This also will make a new parallel copy of the csv with two headers, but delete the second header in the original.
 ##### `filepath`
 Path to whatever file you are ingesting.
 ##### `indexes`
