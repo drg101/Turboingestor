@@ -1,8 +1,8 @@
 #! /bin/bash
 set -e
 
-mongoport="27017"
-mongohost="lattice-46"
+mongoport="27018"
+mongohost="lattice-100"
 mongodb="sustaindb"
 collection="Metadata"
 propertiesfile="config.properties"

@@ -16,8 +16,9 @@ import { exportLabelMap } from './lib/util'
 
     switch (format) {
         case "census_w_descriptive_header":
-            await exportLabelMap(filepath, name);
-            //yes, this is supposed to fallthrough.
+            const newFilePath = await exportLabelMap(filepath, name);
+            ingestCensus(name, newFilePath, indexes);
+            break;
         case "census":
             ingestCensus(name, filepath, indexes);
             break;

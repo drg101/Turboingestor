@@ -42,27 +42,33 @@ export const execCommand = async (cmd: string) => {
 
 export const exportLabelMap = async (pathToCSV: string, name: string = "defaultName") => {
     console.log(`Creating label map for ${pathToCSV}`)
-    const labelMap = await popDescriptiveHeaderIntoLabelMap(pathToCSV);
+    const newFileName = `${pathToCSV.substr(0, pathToCSV.length - 4)}_WITHOUT_DESCRIPTIVE_HEADERS_${Math.random().toString(36).substring(2,6)}_.csv`;
+    const labelMap = await popDescriptiveHeaderIntoLabelMap(pathToCSV, newFileName);
     console.log(labelMap)
-    fs.writeFile(`./out/${name}LabelMap.json`, JSON.stringify(labelMap, null, 4), err => {
-        if (err) {
-            console.error(err);
-            throw "Bad Label map write!";
-        }
-        console.log(`Sucessfully created label map for ${pathToCSV}`)
-    })
+    fs.writeFileSync(`./out/${name}LabelMap.json`, JSON.stringify(labelMap, null, 4))
+    console.log(`Sucessfully created label map for ${pathToCSV}`)
+    return newFileName;
 }
 
-export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string) => {
-    const newFileName = `${pathToCSV.substr(0,pathToCSV.length-3)}_WITH_DESCRIPTIVE_HEADERS.csv`
-    fs.copyFileSync(pathToCSV, newFileName);
-    let CSVContent = fs.readFileSync(newFileName).toString().split('\n'); // read file and convert to array by line break
-    CSVContent.splice(1,1);
-    fs.writeFileSync(pathToCSV, CSVContent.join('\n'));
+export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string, newFileName: string) => {
+    fs.openSync(newFileName, 'w');
+    const fileStream = fs.createReadStream(pathToCSV);
+    const rl = readline.createInterface({
+        input: fileStream,
+        crlfDelay: Infinity
+    });
+    let index = 0;
+    for await (const line of rl) {
+        if(index !== 1){
+            //console.log(line + '\n')
+            fs.appendFileSync(newFileName, line + '\n');
+        }
+        index++;
+    }
 
     return new Promise(resolve => {
-        const readStream = fs.createReadStream(newFileName)
-                .pipe(csv())
-                .on('data', (data) => { readStream.destroy(); resolve(data);  })
+        const readStream = fs.createReadStream(pathToCSV)
+            .pipe(csv())
+            .on('data', (data) => { readStream.destroy(); resolve(data); })
     })
 }
