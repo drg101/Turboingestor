@@ -3,7 +3,9 @@ import { randomString } from './util'
 import csv = require('csv-parser');
 import readline = require('readline');
 
+//welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
+    const tableName = 'BP_30min'
     let files = fs.readdirSync(filepath);
 
     const findFileMatch = (regexp: RegExp) => {
@@ -24,7 +26,7 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     const timeSeriesFileName = `${name}_time_series_${uniqueRun}.csv`
     console.log(`Creating Time Series: ${timeSeriesFileName}`)
-    fs.appendFileSync(`./out/${timeSeriesFileName}`, 'SITE,epoch_time');
+    fs.appendFileSync(`./out/${timeSeriesFileName}`, 'SITE,epoch_time,');
 
     const labelMapFileName = `${name}_label_map_${uniqueRun}.json`
     console.log(`Creating Label map: ${labelMapFileName}`)
@@ -35,6 +37,7 @@ const ingestNeon = async (name: string, filepath: string) => {
     fs.appendFileSync(`./out/${locationsFileName}`, 'SITE,PRODUCT,LAT,LONG\n');
 
     let timeSeriesHeaderIsDone = false;
+    let labelMapIsDone = false;
     for (const siteCode of siteCodes) {
         let relevantPackages = [];
         for (const release of releases) {
@@ -70,7 +73,36 @@ const ingestNeon = async (name: string, filepath: string) => {
                 hasLocationForSiteCode = true;
             }
 
-            const tsRegex = /^.*BP_30min.*$/g
+            if (!labelMapIsDone) {
+                console.log(`Buidling label map for ${name}`)
+                for (const file of relevantPackage.files) {
+                    if (file.fileName.match(/^.*variables.*\.csv$/g)) {
+                        console.log(`File with mapping is: ${file.fileName}`)
+                        type Dictionary = {
+                            [key: string]: any
+                        }
+                        let mapping: Dictionary = {};
+                        await new Promise<void>(resolve => {
+                            fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
+                                .pipe(csv())
+                                .on('data', ({table, fieldName, description, units}) => {
+                                    if(table === tableName){
+                                        mapping[fieldName] = {
+                                            label: description,
+                                            unit: units
+                                        }
+                                    }
+                                })
+                                .on('end', () => { resolve() })
+                        });
+                        fs.writeFileSync(`./out/${labelMapFileName}`, JSON.stringify(mapping, null, 4));
+                        break;
+                    }
+                }
+                labelMapIsDone = true;
+            }
+
+            const tsRegex = new RegExp(`^.*${tableName}.*$`)
             let tsFile: string = "";
             for (const file of relevantPackage.files) {
                 if (file.fileName.match(tsRegex)) {
@@ -98,9 +130,9 @@ const ingestNeon = async (name: string, filepath: string) => {
             let times: number[] = [];
             await new Promise<void>(resolve => {
                 fs.createReadStream(`${filepath}/${folder}/${tsFile}`)
-                .pipe(csv())
-                .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
-                .on('end', () => { resolve() })
+                    .pipe(csv())
+                    .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
+                    .on('end', () => { resolve() })
             });
 
             console.log(`Pasting time series for ${folder}`)
@@ -111,15 +143,12 @@ const ingestNeon = async (name: string, filepath: string) => {
             });
             let index = 0;
             for await (const line of rl) {
-                if(index !== 0){
+                if (index !== 0) {
                     fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteCode},${times.shift()},${line}\n`);
                 }
                 index++;
             }
-
-            break;
         }
-        break;
     }
 }
 
