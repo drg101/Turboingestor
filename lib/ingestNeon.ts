@@ -31,7 +31,7 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     const locationsFileName = `${name}_locations_${uniqueRun}.csv`
     console.log(`Creating Locations: ${locationsFileName}`)
-    fs.openSync(`./out/${locationsFileName}`, 'w');
+    fs.appendFileSync(`./out/${locationsFileName}`, 'SITE,PRODUCT,LAT,LONG\n');
 
     for (const siteCode of siteCodes) {
         let relevantPackages = [];
@@ -54,21 +54,19 @@ const ingestNeon = async (name: string, filepath: string) => {
                 for (const file of relevantPackage.files) {
                     if (file.fileName.match(/^.*sensor_positions.*.csv$/g)) {
                         console.log(`File with positions is: ${file.fileName}`)
-                        const posData = await new Promise(resolve => {
+                        const { referenceLatitude, referenceLongitude } = await new Promise(resolve => {
                             const posStream = fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
                                 .pipe(csv())
-                                .on('data', (data) => { posStream.destroy(); resolve(posStream); })
+                                .on('data', (data) => { posStream.destroy(); resolve(data); })
                         });
-                        console.log(posData)
+                        fs.appendFileSync(`./out/${locationsFileName}`, `${siteCode},${productCode},${Number(referenceLatitude)},${Number(referenceLongitude)}\n`);
                         break;
                     }
                 }
                 hasLocationForSiteCode = true;
             }
-            //console.log(relevantPackages)
             break;
         }
-        break;
     }
 }
 
