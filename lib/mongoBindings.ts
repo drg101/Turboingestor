@@ -20,14 +20,16 @@ export const createIndexes = async (collectionName: string, indexes: string[]) =
             name: index
         }
     });
-
-    MongoClient.connect(url, async function (err, client) {
-        if (err) {
-            throw `Error connecting to mongodb @${url}`
-        };
-        const db = client.db(dbname);
-        await db.collection(collectionName).createIndexes(mongoIndexes);
-        client.close();
-    });
+    await new Promise<void>(resolve => {
+        MongoClient.connect(url, async function (err, client) {
+            if (err) {
+                throw `Error connecting to mongodb @${url}`
+            };
+            const db = client.db(dbname);
+            await db.collection(collectionName).createIndexes(mongoIndexes);
+            client.close();
+            resolve();
+        });
+    })
 }
 

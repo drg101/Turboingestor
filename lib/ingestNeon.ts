@@ -2,6 +2,7 @@ import fs = require('fs');
 import { randomString } from './util'
 import csv = require('csv-parser');
 import readline = require('readline');
+import { importCSV } from './mongoBindings';
 
 //welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
@@ -34,7 +35,7 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     const locationsFileName = `${name}_locations_${uniqueRun}.csv`
     console.log(`Creating Locations: ${locationsFileName}`)
-    fs.appendFileSync(`./out/${locationsFileName}`, 'SITE,PRODUCT,LAT,LONG\n');
+    fs.appendFileSync(`./out/${locationsFileName}`, 'SITE,NAME,LAT,LONG\n');
 
     let timeSeriesHeaderIsDone = false;
     let labelMapIsDone = false;
@@ -78,19 +79,17 @@ const ingestNeon = async (name: string, filepath: string) => {
                 for (const file of relevantPackage.files) {
                     if (file.fileName.match(/^.*variables.*\.csv$/g)) {
                         console.log(`File with mapping is: ${file.fileName}`)
-                        type Dictionary = {
-                            [key: string]: any
-                        }
-                        let mapping: Dictionary = {};
+                        let mapping = [];
                         await new Promise<void>(resolve => {
                             fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
                                 .pipe(csv())
                                 .on('data', ({table, fieldName, description, units}) => {
                                     if(table === tableName){
-                                        mapping[fieldName] = {
+                                        mapping.push({
+                                            name: fieldName,
                                             label: description,
                                             unit: units
-                                        }
+                                        })
                                     }
                                 })
                                 .on('end', () => { resolve() })
@@ -150,6 +149,8 @@ const ingestNeon = async (name: string, filepath: string) => {
             }
         }
     }
+
+
 }
 
 export default ingestNeon;
