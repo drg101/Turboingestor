@@ -27,15 +27,16 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     const timeSeriesFileName = `${name}_time_series_${uniqueRun}.csv`
     console.log(`Creating Time Series: ${timeSeriesFileName}`)
-    fs.appendFileSync(`./out/${timeSeriesFileName}`, 'SITE,epoch_time,');
+    fs.appendFileSync(`./out/${timeSeriesFileName}`, 'site,epoch_time,');
 
     const labelMapFileName = `${name}_label_map_${uniqueRun}.json`
     console.log(`Creating Label map: ${labelMapFileName}`)
     fs.openSync(`./out/${labelMapFileName}`, 'w');
 
-    const locationsFileName = `${name}_locations_${uniqueRun}.csv`
+    const locationsFileName = `${name}_locations_${uniqueRun}.json`
     console.log(`Creating Locations: ${locationsFileName}`)
-    fs.appendFileSync(`./out/${locationsFileName}`, 'SITE,NAME,LAT,LONG\n');
+    fs.openSync(`./out/${locationsFileName}`, 'w');
+    let locationsGeojsonList: {}[] = [];
 
     let timeSeriesHeaderIsDone = false;
     let labelMapIsDone = false;
@@ -67,7 +68,17 @@ const ingestNeon = async (name: string, filepath: string) => {
                                 .pipe(csv())
                                 .on('data', (data) => { posStream.destroy(); resolve(data); })
                         });
-                        fs.appendFileSync(`./out/${locationsFileName}`, `${siteCode},${name},${Number(referenceLatitude)},${Number(referenceLongitude)}\n`);
+                        locationsGeojsonList.push({
+                            "type": "Feature",
+                            "geometry": {
+                                "type": "Point",
+                                "coordinates": [ Number(referenceLongitude), Number(referenceLatitude) ]
+                            },
+                            "properties": {
+                                site: siteCode,
+                                name,
+                            }
+                        });
                         break;
                     }
                 }
@@ -79,12 +90,12 @@ const ingestNeon = async (name: string, filepath: string) => {
                 for (const file of relevantPackage.files) {
                     if (file.fileName.match(/^.*variables.*\.csv$/g)) {
                         console.log(`File with mapping is: ${file.fileName}`)
-                        let mapping = [];
+                        let mapping: {}[] = [];
                         await new Promise<void>(resolve => {
                             fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
                                 .pipe(csv())
-                                .on('data', ({table, fieldName, description, units}) => {
-                                    if(table === tableName){
+                                .on('data', ({ table, fieldName, description, units }) => {
+                                    if (table === tableName) {
                                         mapping.push({
                                             name: fieldName,
                                             label: description,
@@ -150,7 +161,8 @@ const ingestNeon = async (name: string, filepath: string) => {
         }
     }
 
-
+    fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
+    
 }
 
 export default ingestNeon;
