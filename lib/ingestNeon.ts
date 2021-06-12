@@ -154,7 +154,8 @@ const ingestNeon = async (name: string, filepath: string) => {
             let index = 0;
             for await (const line of rl) {
                 if (index !== 0) {
-                    fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteCode},${times.shift()},${line}\n`);
+                    const time = times.shift();
+                    !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteCode},${time},${line}\n`);
                 }
                 index++;
             }
