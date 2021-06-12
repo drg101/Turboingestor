@@ -163,13 +163,13 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     console.log(`Importing ${name} locations.`)
     fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
-    appendJSONList('neon_sites', `./out/${locationsFileName}`);
+    await appendJSONList('neon_sites', `./out/${locationsFileName}`);
 
     console.log(`Importing ${name} time series.`)
-    importCSV(name, `./out/${timeSeriesFileName}`);
+    await importCSV(name, `./out/${timeSeriesFileName}`);
 
     console.log(`Creating indexes for ${name}`)
-    createIndexes(name, ['site', 'epoch_time']);
+    await createIndexes(name, ['site', 'epoch_time']);
 }
 
 export default ingestNeon;
