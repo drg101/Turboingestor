@@ -20,5 +20,5 @@ echo "use ${mongodb}" >> import.js
 echo "db.${collection}.insert(" >> import.js
 cat metadata.json >> import.js 
 echo ")" >> import.js
-#mongo --port $mongoport < import.js
+mongo --port $mongoport < import.js
 cd ..
