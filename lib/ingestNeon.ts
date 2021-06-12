@@ -2,7 +2,7 @@ import fs = require('fs');
 import { randomString } from './util'
 import csv = require('csv-parser');
 import readline = require('readline');
-import { importCSV } from './mongoBindings';
+import { importCSV, importJSON, appendJSONList, createIndexes } from './mongoBindings';
 
 //welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
@@ -161,8 +161,15 @@ const ingestNeon = async (name: string, filepath: string) => {
         }
     }
 
+    console.log(`Importing ${name} locations.`)
     fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
-    
+    appendJSONList('neon_sites', `./out/${locationsFileName}`);
+
+    console.log(`Importing ${name} time series.`)
+    importCSV(name, `./out/${timeSeriesFileName}`);
+
+    console.log(`Creating indexes for ${name}`)
+    createIndexes(name, ['site', 'epoch_time']);
 }
 
 export default ingestNeon;
