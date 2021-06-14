@@ -41,6 +41,7 @@ const ingestNeon = async (name: string, filepath: string) => {
     let timeSeriesHeaderIsDone = false;
     let labelMapIsDone = false;
     for (const siteCode of siteCodes) {
+        const siteID = `${siteCode}_${productCode}`;
         let relevantPackages = [];
         for (const release of releases) {
             for (const releasePackage of release.packages) {
@@ -68,6 +69,7 @@ const ingestNeon = async (name: string, filepath: string) => {
                                 .pipe(csv())
                                 .on('data', (data) => { posStream.destroy(); resolve(data); })
                         });
+            
                         locationsGeojsonList.push({
                             "type": "Feature",
                             "geometry": {
@@ -75,9 +77,10 @@ const ingestNeon = async (name: string, filepath: string) => {
                                 "coordinates": [ Number(referenceLongitude), Number(referenceLatitude) ]
                             },
                             "properties": {
-                                site: siteCode,
+                                site: siteID,
                                 name,
-                            }
+                            },
+                            "site": siteID
                         });
                         break;
                     }
@@ -155,7 +158,7 @@ const ingestNeon = async (name: string, filepath: string) => {
             for await (const line of rl) {
                 if (index !== 0) {
                     const time = times.shift();
-                    !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteCode},${time},${line}\n`);
+                    !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteID},${time},${line}\n`);
                 }
                 index++;
             }
