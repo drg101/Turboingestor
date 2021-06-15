@@ -10,7 +10,7 @@ import { exportLabelMap } from './lib/util'
         format: { type: 'string', requiresArg: true, default: "census" },
         filepath: { type: 'string', requiresArg: true, demandOption: true },
         indexes: { type: 'array', default: [] },
-        name: { type: 'string', requiresArg: true, demandOption: true }
+        name: { type: 'string', requiresArg: true, demandOption: true },
     }).argv;
 
 

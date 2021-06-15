@@ -2,6 +2,7 @@ import csv = require('csv-parser');
 import fs = require('fs');
 import readline = require('readline');
 import { exec } from 'child_process';
+import fetch from 'node-fetch';
 
 export const getFieldsAndValidateCSV = (path: string) => {
     try {
@@ -75,4 +76,10 @@ export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string, newFil
 
 export const randomString = (length: number) => {
     return Math.random().toString(36).substring(2, 2 + length);
+}
+
+export const getJSON = async (URL: string) => {
+    let response = await fetch(URL);
+    let data = await response.json()
+    return data;
 }
