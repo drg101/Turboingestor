@@ -1,3 +1,3 @@
 ./build.sh
 
-node build/download.js
+node build/download.js $1
