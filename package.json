@@ -21,6 +21,7 @@
     "@types/mongodb": "^3.6.16",
     "@types/node-fetch": "^2.5.10",
     "@types/yargs": "^17.0.0",
+    "chalk": "^4.1.1",
     "csv-parser": "^3.0.0",
     "mongodb": "^3.6.9",
     "node-fetch": "^2.6.1",
