@@ -2,6 +2,7 @@ import fs = require('fs');
 import { getJSON, randomString, execCommand } from './lib/util';
 import chalk = require('chalk');
 import yargs = require('yargs/yargs');
+import { neonToken } from './lib/apiTokens'
 
 type dictArr = { [ key: string ]: string[] };
 
@@ -13,10 +14,24 @@ interface resCode {
 };
 type dict = { [ key: string ]: string };
 
+const WAIT_TIME = 500;
+let queueLen = 1;
+const waitForTurn = async () => {
+    return new Promise<void>(resolve => {
+        setTimeout(() => {
+            resolve();
+            queueLen--;
+        }, WAIT_TIME * queueLen)
+        //console.log(chalk.red(WAIT_TIME*queueLen))
+        queueLen++;
+    });
+}
+
 const downloadAndUnzip = async ({month, siteCode, dataProductTitle, dataProductCode, url, out}: dict) => {
     console.log(`Downloading ${month} for ${siteCode}, ${dataProductTitle}`)
     const zipfile = `${out}/tmp/${siteCode}_${dataProductCode}_${month}.zip`
-    await execCommand(`wget -O ${zipfile} ${url}`);
+    await waitForTurn();
+    await execCommand(`wget -O ${zipfile} ${url}?apiToken=${neonToken}`);
     const outDir = `${out}/${dataProductCode}/${siteCode}_${month}`;
     fs.mkdirSync(outDir);
     await execCommand(`unzip ${zipfile} -d ${outDir}`);
@@ -27,7 +42,8 @@ const downloadNeon = async (out: string) => {
     fs.mkdirSync(`${out}/tmp`);
     const rid = randomString(4);
     let resCodes: resCode = {};
-    const sites = (await getJSON(`https://data.neonscience.org/api/v0/sites`)).data;
+    await waitForTurn();
+    const sites = (await getJSON(`https://data.neonscience.org/api/v0/sites?apiToken=${neonToken}`)).data;
     for (const { siteCode, dataProducts } of sites) {
         for (const { dataProductTitle, dataProductCode, availableMonths, availableDataUrls } of dataProducts) {
             if (!fs.existsSync(`${out}/${dataProductCode}`)) {
@@ -40,6 +56,7 @@ const downloadNeon = async (out: string) => {
                     sites: [],
                 };
             }
+            fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
 
             const siteDescriptor = {
                 code: siteCode,
@@ -48,11 +65,11 @@ const downloadNeon = async (out: string) => {
 
             let packageDownloadsP: Promise<any>[] = [];
             for (const availableDataUrl of availableDataUrls) {
+                await waitForTurn();
                 packageDownloadsP.push((getJSON(availableDataUrl)));
             }
             const packageDownloads = await Promise.all(packageDownloadsP);
             console.log(`There are ${packageDownloads.length} packages which will be downloaded.`)
-            console.log(packageDownloads[0].data.files)
 
             let zipDownloadsP: Promise<void>[] = [];
             for (const { data } of packageDownloads) {
@@ -67,7 +84,8 @@ const downloadNeon = async (out: string) => {
             await Promise.all(zipDownloadsP);
             console.log(chalk.green(`Finished downloading all zips for ${siteCode}, ${dataProductTitle}`))
             resCodes[ dataProductCode ].sites.push(siteDescriptor);
-            break;
+
+            fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
         }
         break;
     }
