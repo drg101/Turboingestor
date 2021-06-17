@@ -9,19 +9,25 @@ type dictionary = {
     [key: string]: string
 }
 
+type dictionaryAny = {
+    [key: string]: any
+}
+
 //welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
     const tableName = 'BP_30min'
-    let files: dictionary[] = fs.readdirSync(filepath).map(fileName => {return {
-        site: fileName.split('_')[0], 
-        month: fileName.split('_')[1],
-        fileName
-    }});
+    let files: dictionary[] = fs.readdirSync(filepath).map(fileName => {
+        return {
+            site: fileName.split('_')[0],
+            month: fileName.split('_')[1],
+            fileName
+        }
+    });
     files = files.sort((a, b) => new Date(a.month).valueOf() - new Date(b.month).valueOf());
-    const productCode = path.basename(path.dirname(filepath))
+    const productCode = path.basename(filepath)
 
-    const findFileMatch = (regexp: RegExp) => {
-        for (const {fileName} of files) {
+    const findFileMatch = (regexp: RegExp, fileList = files.map(file => file.fileName)) => {
+        for (const fileName of fileList) {
             if (fileName.match(regexp)) {
                 return fileName;
             }
@@ -49,116 +55,118 @@ const ingestNeon = async (name: string, filepath: string) => {
     for (const site of [...new Set(files.map(file => file.site))]) {
         const siteID = `${site}_${productCode}`;
         console.log(siteID);
-        console.log(siteID)
 
-        // let locationsForSiteCode = [];
-        // for (const { month, fileName } of files.filter(file => file.site === site)) {
-        //     console.log(`Package folder is ${fileName}`)
+        let locationsForSiteCode = [];
+        for (const { month, fileName } of files.filter(file => file.site === site)) {
+            //console.log(`Package folder is ${fileName}`)
 
-        //     if (!locationsForSiteCode.length) {
-        //         console.log(`Getting sensor pos for ${siteCode}`)
-        //         for (const file of relevantPackage.files) {
-        //             if (file.fileName.match(/^.*sensor_positions.*.csv$/g)) {
-        //                 console.log(`File with positions is: ${file.fileName}`)
-        //                 const { referenceLatitude, referenceLongitude } = await new Promise(resolve => {
-        //                     const posStream = fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
-        //                         .pipe(csv())
-        //                         .on('data', (data) => { posStream.destroy(); resolve(data); })
-        //                 });
-            
-        //                 locationsGeojsonList.push({
-        //                     "type": "Feature",
-        //                     "geometry": {
-        //                         "type": "Point",
-        //                         "coordinates": [ Number(referenceLongitude), Number(referenceLatitude) ]
-        //                     },
-        //                     "properties": {
-        //                         site: siteID,
-        //                         name,
-        //                     },
-        //                     "site": siteID
-        //                 });
-        //                 break;
-        //             }
-        //         }
-        //         hasLocationForSiteCode = true;
-        //     }
+            if (!locationsForSiteCode.length) {
+                console.log(`Getting sensor pos for ${siteID}`)
+                for (const file of fs.readdirSync(`${filepath}/${fileName}`)) {
+                    if (file.match(/^.*sensor_positions.*.csv$/g)) {
+                        console.log(`File with positions is: ${file}`)
+                        const positions = await new Promise(resolve => {
+                            let datum: dictionaryAny[] = [];
+                            const posStream = fs.createReadStream(`${filepath}/${fileName}/${file}`)
+                                .pipe(csv())
+                                .on('data', (data) => { datum.push(data); })
+                                .on('end', () => { resolve(datum) })
+                        });
+                        console.log(positions)
 
-        //     if (!labelMapIsDone) {
-        //         console.log(`Buidling label map for ${name}`)
-        //         for (const file of relevantPackage.files) {
-        //             if (file.fileName.match(/^.*variables.*\.csv$/g)) {
-        //                 console.log(`File with mapping is: ${file.fileName}`)
-        //                 let mapping: {}[] = [];
-        //                 await new Promise<void>(resolve => {
-        //                     fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
-        //                         .pipe(csv())
-        //                         .on('data', ({ table, fieldName, description, units }) => {
-        //                             if (table === tableName) {
-        //                                 mapping.push({
-        //                                     name: fieldName,
-        //                                     label: description,
-        //                                     unit: units
-        //                                 })
-        //                             }
-        //                         })
-        //                         .on('end', () => { resolve() })
-        //                 });
-        //                 fs.writeFileSync(`./out/${labelMapFileName}`, JSON.stringify(mapping, null, 4));
-        //                 break;
-        //             }
-        //         }
-        //         labelMapIsDone = true;
-        //     }
+                        // locationsGeojsonList.push({
+                        //     "type": "Feature",
+                        //     "geometry": {
+                        //         "type": "Point",
+                        //         "coordinates": [ Number(referenceLongitude), Number(referenceLatitude) ]
+                        //     },
+                        //     "properties": {
+                        //         site: siteID,
+                        //         name,
+                        //     },
+                        //     "site": siteID
+                        // });
+                        // break;
+                    }
+                }
+                locationsForSiteCode.push('poop')
+            }
 
-        //     const tsRegex = new RegExp(`^.*${tableName}.*$`)
-        //     let tsFile: string = "";
-        //     for (const file of relevantPackage.files) {
-        //         if (file.fileName.match(tsRegex)) {
-        //             tsFile = file.fileName;
-        //             console.log(`Time series file is ${tsFile}`)
-        //             break;
-        //         }
-        //     }
+            //     if (!labelMapIsDone) {
+            //         console.log(`Buidling label map for ${name}`)
+            //         for (const file of relevantPackage.files) {
+            //             if (file.fileName.match(/^.*variables.*\.csv$/g)) {
+            //                 console.log(`File with mapping is: ${file.fileName}`)
+            //                 let mapping: {}[] = [];
+            //                 await new Promise<void>(resolve => {
+            //                     fs.createReadStream(`${filepath}/${folder}/${file.fileName}`)
+            //                         .pipe(csv())
+            //                         .on('data', ({ table, fieldName, description, units }) => {
+            //                             if (table === tableName) {
+            //                                 mapping.push({
+            //                                     name: fieldName,
+            //                                     label: description,
+            //                                     unit: units
+            //                                 })
+            //                             }
+            //                         })
+            //                         .on('end', () => { resolve() })
+            //                 });
+            //                 fs.writeFileSync(`./out/${labelMapFileName}`, JSON.stringify(mapping, null, 4));
+            //                 break;
+            //             }
+            //         }
+            //         labelMapIsDone = true;
+            //     }
 
-        //     if (!timeSeriesHeaderIsDone) {
-        //         console.log(`Adding time series header to out!`)
-        //         const fileStream = fs.createReadStream(`${filepath}/${folder}/${tsFile}`);
-        //         const rl = readline.createInterface({
-        //             input: fileStream,
-        //             crlfDelay: Infinity
-        //         });
-        //         for await (const line of rl) {
-        //             fs.appendFileSync(`./out/${timeSeriesFileName}`, `${line}\n`);
-        //             break;
-        //         }
-        //         timeSeriesHeaderIsDone = true;
-        //     }
+            //     const tsRegex = new RegExp(`^.*${tableName}.*$`)
+            //     let tsFile: string = "";
+            //     for (const file of relevantPackage.files) {
+            //         if (file.fileName.match(tsRegex)) {
+            //             tsFile = file.fileName;
+            //             console.log(`Time series file is ${tsFile}`)
+            //             break;
+            //         }
+            //     }
 
-        //     console.log(`Collection epoch times from ${folder}`)
-        //     let times: number[] = [];
-        //     await new Promise<void>(resolve => {
-        //         fs.createReadStream(`${filepath}/${folder}/${tsFile}`)
-        //             .pipe(csv())
-        //             .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
-        //             .on('end', () => { resolve() })
-        //     });
+            //     if (!timeSeriesHeaderIsDone) {
+            //         console.log(`Adding time series header to out!`)
+            //         const fileStream = fs.createReadStream(`${filepath}/${folder}/${tsFile}`);
+            //         const rl = readline.createInterface({
+            //             input: fileStream,
+            //             crlfDelay: Infinity
+            //         });
+            //         for await (const line of rl) {
+            //             fs.appendFileSync(`./out/${timeSeriesFileName}`, `${line}\n`);
+            //             break;
+            //         }
+            //         timeSeriesHeaderIsDone = true;
+            //     }
 
-        //     console.log(`Pasting time series for ${folder}`)
-        //     const fileStream = fs.createReadStream(`${filepath}/${folder}/${tsFile}`);
-        //     const rl = readline.createInterface({
-        //         input: fileStream,
-        //         crlfDelay: Infinity
-        //     });
-        //     let index = 0;
-        //     for await (const line of rl) {
-        //         if (index !== 0) {
-        //             const time = times.shift();
-        //             !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteID},${time},${line}\n`);
-        //         }
-        //         index++;
-        //     }
-        // }
+            //     console.log(`Collection epoch times from ${folder}`)
+            //     let times: number[] = [];
+            //     await new Promise<void>(resolve => {
+            //         fs.createReadStream(`${filepath}/${folder}/${tsFile}`)
+            //             .pipe(csv())
+            //             .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
+            //             .on('end', () => { resolve() })
+            //     });
+
+            //     console.log(`Pasting time series for ${folder}`)
+            //     const fileStream = fs.createReadStream(`${filepath}/${folder}/${tsFile}`);
+            //     const rl = readline.createInterface({
+            //         input: fileStream,
+            //         crlfDelay: Infinity
+            //     });
+            //     let index = 0;
+            //     for await (const line of rl) {
+            //         if (index !== 0) {
+            //             const time = times.shift();
+            //             !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteID},${time},${line}\n`);
+            //         }
+            //         index++;
+            //     }
+        }
     }
 
     // console.log(`Importing ${name} locations.`)
