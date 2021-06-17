@@ -65,31 +65,39 @@ const ingestNeon = async (name: string, filepath: string) => {
                 for (const file of fs.readdirSync(`${filepath}/${fileName}`)) {
                     if (file.match(/^.*sensor_positions.*.csv$/g)) {
                         console.log(`File with positions is: ${file}`)
-                        const positions = await new Promise(resolve => {
+                        const positions = await new Promise<dictionaryAny[]>(resolve => {
                             let datum: dictionaryAny[] = [];
                             const posStream = fs.createReadStream(`${filepath}/${fileName}/${file}`)
                                 .pipe(csv())
-                                .on('data', (data) => { datum.push(data); })
+                                .on('data', (data) => {
+                                    data.loc = data['HOR.VER'];
+                                    datum.push(data);
+                                })
                                 .on('end', () => { resolve(datum) })
                         });
-                        console.log(positions)
+  
+                        const geojsonPositions = positions.map(position => {
+                            const site = `${siteID}_${position?.loc}`
+                            return {
+                                "type": "Feature",
+                                "geometry": {
+                                    "type": "Point",
+                                    "coordinates": [Number(position?.referenceLongitude), Number(position?.referenceLatitude)]
+                                },
+                                "properties": {
+                                    site,
+                                    name,
+                                },
+                                site
+                            }
+                        });
 
-                        // locationsGeojsonList.push({
-                        //     "type": "Feature",
-                        //     "geometry": {
-                        //         "type": "Point",
-                        //         "coordinates": [ Number(referenceLongitude), Number(referenceLatitude) ]
-                        //     },
-                        //     "properties": {
-                        //         site: siteID,
-                        //         name,
-                        //     },
-                        //     "site": siteID
-                        // });
-                        // break;
+                        locationsGeojsonList.push(...geojsonPositions);
+                        locationsForSiteCode.push(...positions.map(position => position.loc))
+                        break;
                     }
                 }
-                locationsForSiteCode.push('poop')
+
             }
 
             //     if (!labelMapIsDone) {
@@ -167,6 +175,7 @@ const ingestNeon = async (name: string, filepath: string) => {
             //         index++;
             //     }
         }
+        break;
     }
 
     // console.log(`Importing ${name} locations.`)
