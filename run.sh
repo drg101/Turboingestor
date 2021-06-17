@@ -19,4 +19,4 @@ fi
 
 node --max_old_space_size=8192 build/ingest.js $2
 
-#./updateMetadata.sh $1
+./updateMetadata.sh $1

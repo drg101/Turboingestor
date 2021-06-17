@@ -109,6 +109,12 @@ const ingestNeon = async (name: string, filepath: string) => {
                     if (file.match(/^.*variables.*\.csv$/g)) {
                         console.log(`File with mapping is: ${file}`)
                         let mapping: {}[] = [];
+                        mapping.push({
+                            "name": "epoch_time",
+                            "label": "Date",
+                            "type": "date",
+                            "step": "day"
+                        });
                         await new Promise<void>(resolve => {
                             fs.createReadStream(`${filepath}/${fileName}/${file}`)
                                 .pipe(csv())
@@ -117,13 +123,23 @@ const ingestNeon = async (name: string, filepath: string) => {
                                         mapping.push({
                                             name: fieldName,
                                             label: description,
-                                            unit: units
+                                            unit: units,
+                                            hideByDefault: true
                                         })
                                     }
                                 })
                                 .on('end', () => { resolve() })
                         });
-                        fs.writeFileSync(`./out/${labelMapFileName}`, JSON.stringify(mapping, null, 4));
+                        fs.writeFileSync(`./out/${labelMapFileName}`, JSON.stringify({
+                            collection: name,
+                            icon: "science",
+                            temporal: "epoch_time",
+                            linked: {
+                                collection: "neon_sites",
+                                field: "site"
+                            },
+                            fieldMetadata: mapping
+                        }, null, 4));
                         break;
                     }
                 }
