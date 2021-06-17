@@ -25,6 +25,7 @@
     "csv-parser": "^3.0.0",
     "mongodb": "^3.6.9",
     "node-fetch": "^2.6.1",
+    "prompt": "^1.1.0",
     "yargs": "^17.0.1"
   },
   "devDependencies": {
