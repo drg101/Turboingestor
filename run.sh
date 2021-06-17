@@ -16,11 +16,6 @@ else
     echo
 fi
 
-echo Name = $1
-echo Format = $2
-echo Filepath = $3
-echo Indexes = $4
-echo
-node --max_old_space_size=8192 build/ingest.js --name $1 --format $2 --filepath $3 --indexes $4
+node --max_old_space_size=8192 build/ingest.js $2
 
 ./updateMetadata.sh $1

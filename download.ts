@@ -59,7 +59,7 @@ const clearOld = async (out: string) => {
 }
 
 const downloadNeon = async (out: string) => {
-    await clearOld(out);
+    //await clearOld(out);
     const rid = randomString(4);
     let resCodes: resCode = {};
     await waitForTurn();

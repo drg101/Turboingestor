@@ -3,25 +3,31 @@ import { randomString } from './util'
 import csv = require('csv-parser');
 import readline = require('readline');
 import { importCSV, importJSON, appendJSONList, createIndexes } from './mongoBindings';
+import path = require('path')
+
+type dictionary = {
+    [key: string]: string
+}
 
 //welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
     const tableName = 'BP_30min'
-    let files = fs.readdirSync(filepath);
+    let files: dictionary[] = fs.readdirSync(filepath).map(fileName => {return {
+        site: fileName.split('_')[0], 
+        month: fileName.split('_')[1],
+        fileName
+    }});
+    const productCode = path.basename(path.dirname(filepath))
+
 
     const findFileMatch = (regexp: RegExp) => {
-        for (const file of files) {
-            if (file.match(regexp)) {
-                return file;
+        for (const {fileName} of files) {
+            if (fileName.match(regexp)) {
+                return fileName;
             }
         }
     }
 
-    const manifestFp = findFileMatch(/^.*\.manifest\..*\.json$/g);
-    console.log(`Neon manifest is ${manifestFp}`)
-    const manifest = JSON.parse(fs.readFileSync(`${filepath}/${manifestFp}`, 'utf8'));
-    const { siteCodes, productCode, productName, releases } = manifest;
-    console.log(`Sitecodes are: ${siteCodes}`)
     const uniqueRun = randomString(4);
     console.log(`Unique code for this run is ${uniqueRun}`)
 
@@ -40,26 +46,20 @@ const ingestNeon = async (name: string, filepath: string) => {
 
     let timeSeriesHeaderIsDone = false;
     let labelMapIsDone = false;
-    for (const siteCode of siteCodes) {
-        const siteID = `${siteCode}_${productCode}`;
-        let relevantPackages = [];
-        for (const release of releases) {
-            for (const releasePackage of release.packages) {
-                if (releasePackage.siteCode === siteCode) {
-                    relevantPackages.push(releasePackage);
-                }
-            }
-        }
+    for (const site of [...new Set(files.map(file => file.site))]) {
+        const siteID = `${site}_${productCode}`;
+        let relevantPaths = [];
+
         relevantPackages = relevantPackages.sort((a, b) => new Date(a.month).valueOf() - new Date(b.month).valueOf());
 
-        let hasLocationForSiteCode = false;
+        let locationsForSiteCode = [];
         for (const relevantPackage of relevantPackages) {
             const { domainCode, month } = relevantPackage;
             const folder = findFileMatch(new RegExp(`^NEON\.${domainCode}\.${siteCode}\.${productCode}\.${month}\..*$`));
             console.log(`Package folder is ${folder}`)
 
 
-            if (!hasLocationForSiteCode) {
+            if (!locationsForSiteCode.length) {
                 console.log(`Getting sensor pos for ${siteCode}`)
                 for (const file of relevantPackage.files) {
                     if (file.fileName.match(/^.*sensor_positions.*.csv$/g)) {
