@@ -56,7 +56,7 @@ const ingestNeon = async (name: string, filepath: string) => {
         const siteID = `${site}_${productCode}`;
         console.log(siteID);
 
-        let locationsForSiteCode = [];
+        let locationsForSiteCode: string[] = [];
         for (const { month, fileName } of files.filter(file => file.site === site)) {
             //console.log(`Package folder is ${fileName}`)
             const innerFileList = fs.readdirSync(`${filepath}/${fileName}`)
@@ -86,13 +86,16 @@ const ingestNeon = async (name: string, filepath: string) => {
                                 },
                                 "properties": {
                                     site,
-                                    name,
+                                    collectionName: name,
+                                    name: position?.name,
+                                    description: position?.description
                                 },
                                 site
                             }
                         });
 
                         locationsGeojsonList.push(...geojsonPositions);
+                        fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
                         locationsForSiteCode.push(...positions.map(position => position.loc))
                         break;
                     }
@@ -151,42 +154,50 @@ const ingestNeon = async (name: string, filepath: string) => {
                 timeSeriesHeaderIsDone = true;
             }
 
-            //     console.log(`Collection epoch times from ${folder}`)
-            //     let times: number[] = [];
-            //     await new Promise<void>(resolve => {
-            //         fs.createReadStream(`${filepath}/${folder}/${tsFile}`)
-            //             .pipe(csv())
-            //             .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
-            //             .on('end', () => { resolve() })
-            //     });
-
-            //     console.log(`Pasting time series for ${folder}`)
-            //     const fileStream = fs.createReadStream(`${filepath}/${folder}/${tsFile}`);
-            //     const rl = readline.createInterface({
-            //         input: fileStream,
-            //         crlfDelay: Infinity
-            //     });
-            //     let index = 0;
-            //     for await (const line of rl) {
-            //         if (index !== 0) {
-            //             const time = times.shift();
-            //             !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${siteID},${time},${line}\n`);
-            //         }
-            //         index++;
-            //     }
+            for (const tsFile of tsFiles) {
+                const locationAtSite = locationsForSiteCode.find(loc => { 
+                    const matchStr = `^.*${loc.replace(".","\.")}\..*\.${tableName}.*$`
+                    return tsFile.match(new RegExp(matchStr)) 
+                })
+                if(!locationAtSite){
+                    throw "bad"
+                }
+                const site = `${siteID}_${locationAtSite}`
+                console.log(`Collection epoch times from ${tsFile}`)
+                let times: number[] = [];
+                await new Promise<void>(resolve => {
+                    fs.createReadStream(`${filepath}/${fileName}/${tsFile}`)
+                        .pipe(csv())
+                        .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
+                        .on('end', () => { resolve() })
+                });
+                console.log(`Pasting time series for ${tsFile}`)
+                const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFile}`);
+                const rl = readline.createInterface({
+                    input: fileStream,
+                    crlfDelay: Infinity
+                });
+                let index = 0;
+                for await (const line of rl) {
+                    if (index !== 0) {
+                        const time = times.shift();
+                        !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${site},${time},${line}\n`);
+                    }
+                    index++;
+                }
+            }
         }
-        break;
     }
 
     console.log(`Importing ${name} locations.`)
     fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
-    // await appendJSONList('neon_sites', `./out/${locationsFileName}`);
+    await appendJSONList('neon_sites', `./out/${locationsFileName}`);
 
-    // console.log(`Importing ${name} time series.`)
-    // await importCSV(name, `./out/${timeSeriesFileName}`);
+    console.log(`Importing ${name} time series.`)
+    await importCSV(name, `./out/${timeSeriesFileName}`);
 
-    // console.log(`Creating indexes for ${name}`)
-    // await createIndexes(name, ['site', 'epoch_time']);
+    console.log(`Creating indexes for ${name}`)
+    await createIndexes(name, ['site', 'epoch_time']);
 }
 
 export default ingestNeon;
