@@ -17,6 +17,6 @@ else
     echo
 fi
 
-node --max_old_space_size=8192 build/ingest.js $2
+node --max_old_space_size=8192 build/ingest.js --name $1 $2
 
 ./updateMetadata.sh $1

@@ -6,11 +6,12 @@ import { exportLabelMap } from './lib/util'
 
 (async () => {
 
-    const { format, filepath, indexes, name } = await yargs(process.argv.slice(2)).array('indexes').options({
+    const { format, filepath, indexes, name, table } = await yargs(process.argv.slice(2)).array('indexes').options({
         format: { type: 'string', requiresArg: true, default: "census" },
         filepath: { type: 'string', requiresArg: true, demandOption: true },
         indexes: { type: 'array', default: [] },
         name: { type: 'string', requiresArg: true, demandOption: true },
+        table: { type: 'string' },
     }).argv;
 
 
@@ -24,7 +25,7 @@ import { exportLabelMap } from './lib/util'
             ingestCensus(name, filepath, indexes);
             break;
         case "neon":
-            ingestNeon(name, filepath);
+            table && ingestNeon(name, filepath, table);
             break;
     }
 

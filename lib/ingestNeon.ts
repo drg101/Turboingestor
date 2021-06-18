@@ -14,8 +14,7 @@ type dictionaryAny = {
 }
 
 //welp, atleast theres not really any external dependencies.
-const ingestNeon = async (name: string, filepath: string) => {
-    const tableName = 'THRPRE_30min'
+const ingestNeon = async (name: string, filepath: string, tableName: string) => {
     let files: dictionary[] = fs.readdirSync(filepath).map(fileName => {
         return {
             site: fileName.split('_')[0],
@@ -48,7 +47,7 @@ const ingestNeon = async (name: string, filepath: string) => {
     const locationsFileName = `${name}_locations_${uniqueRun}.json`
     console.log(`Creating Locations: ${locationsFileName}`)
     fs.openSync(`./out/${locationsFileName}`, 'w');
-    let locationsGeojsonList: {}[] = [];
+    let locationsGeojsonList: dictionaryAny[] = [];
 
     let timeSeriesHeaderIsDone = false;
     let labelMapIsDone = false;
@@ -57,6 +56,8 @@ const ingestNeon = async (name: string, filepath: string) => {
         console.log(siteID);
 
         let locationsForSiteCode: string[] = [];
+        let geojsonPositionsForSiteCode: dictionaryAny[] = [];
+        let locsWhichAreUsed: Set<string> = new Set();
         for (const { month, fileName } of files.filter(file => file.site === site)) {
             //console.log(`Package folder is ${fileName}`)
             const innerFileList = fs.readdirSync(`${filepath}/${fileName}`)
@@ -94,8 +95,7 @@ const ingestNeon = async (name: string, filepath: string) => {
                             }
                         });
 
-                        locationsGeojsonList.push(...geojsonPositions);
-                        fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
+                        geojsonPositionsForSiteCode.push(...geojsonPositions);
                         locationsForSiteCode.push(...positions.map(position => position.loc))
                         break;
                     }
@@ -105,6 +105,7 @@ const ingestNeon = async (name: string, filepath: string) => {
 
             if (!labelMapIsDone) {
                 console.log(`Buidling label map for ${name}`)
+                let foundLabels = false;
                 for (const file of innerFileList) {
                     if (file.match(/^.*variables.*\.csv$/g)) {
                         console.log(`File with mapping is: ${file}`)
@@ -120,6 +121,7 @@ const ingestNeon = async (name: string, filepath: string) => {
                                 .pipe(csv())
                                 .on('data', ({ table, fieldName, description, units }) => {
                                     if (table === tableName) {
+                                        foundLabels = true;
                                         mapping.push({
                                             name: fieldName,
                                             label: description,
@@ -143,7 +145,7 @@ const ingestNeon = async (name: string, filepath: string) => {
                         break;
                     }
                 }
-                labelMapIsDone = true;
+                labelMapIsDone = foundLabels;
             }
 
             const tsRegex = new RegExp(`^.*${tableName}.*$`)
@@ -156,7 +158,7 @@ const ingestNeon = async (name: string, filepath: string) => {
             }
 
 
-            if (!timeSeriesHeaderIsDone) {
+            if (!timeSeriesHeaderIsDone && tsFiles.length) {
                 console.log(`Adding time series header to out!`)
                 const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFiles[0]}`);
                 const rl = readline.createInterface({
@@ -174,10 +176,13 @@ const ingestNeon = async (name: string, filepath: string) => {
                 const locationAtSite = locationsForSiteCode.find(loc => { 
                     const matchStr = `^.*${loc.replace(".","\.")}\..*\.${tableName}.*$`
                     return tsFile.match(new RegExp(matchStr)) 
-                })
+                });
+
                 if(!locationAtSite){
                     throw "bad"
                 }
+                locsWhichAreUsed.add(locationAtSite);
+
                 const site = `${siteID}_${locationAtSite}`
                 console.log(`Collection epoch times from ${tsFile}`)
                 let times: number[] = [];
@@ -203,6 +208,8 @@ const ingestNeon = async (name: string, filepath: string) => {
                 }
             }
         }
+        locationsGeojsonList.push(...geojsonPositionsForSiteCode.filter(location => locsWhichAreUsed.has(location.properties.loc)));
+        fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
     }
 
     console.log(`Importing ${name} locations.`)
