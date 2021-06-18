@@ -15,7 +15,7 @@ type dictionaryAny = {
 
 //welp, atleast theres not really any external dependencies.
 const ingestNeon = async (name: string, filepath: string) => {
-    const tableName = '2DWSD_30min'
+    const tableName = 'THRPRE_30min'
     let files: dictionary[] = fs.readdirSync(filepath).map(fileName => {
         return {
             site: fileName.split('_')[0],
@@ -85,10 +85,10 @@ const ingestNeon = async (name: string, filepath: string) => {
                                     "coordinates": [Number(position?.referenceLongitude), Number(position?.referenceLatitude)]
                                 },
                                 "properties": {
+                                    ...position,
                                     site,
                                     collectionName: name,
-                                    name: position?.name,
-                                    description: position?.description
+                                    name: position?.name
                                 },
                                 site
                             }
