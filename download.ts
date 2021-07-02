@@ -15,7 +15,7 @@ interface resCode {
 };
 type dict = { [ key: string ]: string };
 
-const WAIT_TIME = 600;
+const WAIT_TIME = 650;
 let queueLen = 1;
 const waitForTurn = async () => {
     return new Promise<void>(resolve => {
@@ -59,7 +59,7 @@ const clearOld = async (out: string) => {
 }
 
 const downloadNeon = async (out: string) => {
-    //await clearOld(out);
+    await clearOld(out);
     const rid = randomString(4);
     let resCodes: resCode = {};
     await waitForTurn();
