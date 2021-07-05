@@ -24,7 +24,7 @@ import { exportLabelMap, exportLabelMapMulti, combineMultiyearCensusAndGetFilepa
             break;
         case "multiyear_census_w_descriptive_header":
             const files = getMultiyearCensusFiles(filepath)
-            normalizeCSVFiles(files);
+            normalizeCSVFiles(files, name);
             //const newFilePaths = await exportLabelMapMulti(files, name);
             //const combinedFilePath = await combineMultiyearCensusAndGetFilepath(newFilePaths, name)
             //ingestCensus(name, combinedFilePath, ["GISJOIN", "epoch_time"]);

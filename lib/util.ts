@@ -98,7 +98,7 @@ const getFirstEntryOfColumnOfCSV = async (pathToCSV: string, columnName: string)
     })
 }
 
-export const normalizeCSVFiles = async (pathToCSVs: string[]) => {
+export const normalizeCSVFiles = async (pathToCSVs: string[], name: string) => {
     const labelMaps = await Promise.all(pathToCSVs.map(pathToCSV => getDescriptiveHeader(pathToCSV)))
     let deps: stringArrayDictionary = {}
     const finalLabelMap: csvDictionary = {}
@@ -120,7 +120,7 @@ export const normalizeCSVFiles = async (pathToCSVs: string[]) => {
     }, {} as stringArrayDictionary)
 
     const invertedDeps: stringDictionary = Object.entries(deps).reduce((acc: stringDictionary, [masterCode, codes]) => {
-        for(const code of codes){
+        for (const code of codes) {
             acc[code] = masterCode;
         }
         return acc;
@@ -140,25 +140,46 @@ export const normalizeCSVFiles = async (pathToCSVs: string[]) => {
         });
 
         let index = 0;
-        for await (const line of rl) {
+        for await (let line of rl) {
             if (index === 0) {
-                const labelMap = await getDescriptiveHeader(pathToCSV)
-                for(const [key, master] of Object.entries(invertedDeps)){
-
+                for (const [key, master] of Object.entries(invertedDeps)) {
+                    const regexp = new RegExp(key, 'g')
+                    line = line.replace(regexp, master);
                 }
             }
-            else if(index === 1){
-                
+            else if (index === 1) {
+                index++;
+                continue;
             }
-            else {
-                fs.appendFileSync(newFileName, line + '\n');
-            }
+            fs.appendFileSync(newFileName, line + '\n');
             index++;
         }
     }
 
+    const outFilePath = `./out/${name}_final_${randomRun}.csv`;
+    fs.openSync(outFilePath, 'w');
+    const finalKeys = Object.keys(deps)
+    const headerLine = finalKeys.join(',');
+    fs.appendFileSync(outFilePath, headerLine + '\n')
 
-    console.log(invertedDeps)
+    for (const newFile of newFiles) {
+        return new Promise<void>(resolve => {
+            let index = 0
+            fs.createReadStream(newFile)
+                .pipe(csv())
+                .on('data', (data: csvDictionary) => {
+                    let line = ''
+                    for(const finalKey of finalKeys){
+
+                    }
+                    for (const [key, value] of Object.entries(data)) {
+                        
+                    }
+                })
+                .on('end', () => { resolve() })
+        })
+    }
+
 }
 
 export const getMultiyearCensusFiles = (pathToFolder: string) => {
