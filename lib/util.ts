@@ -159,7 +159,7 @@ const getFirstEntryOfColumnOfCSV = async (pathToCSV: string, columnName: string)
     })
 }
 
-export const normalizeCSVFiles = async (pathToCSVs: string[], name: string) => {
+export const normalizeAndCombineCSVFiles = async (pathToCSVs: string[], name: string) => {
     const labelMaps = await Promise.all(pathToCSVs.map(pathToCSV => getDescriptiveHeader(pathToCSV)))
     let deps: stringArrayDictionary = {}
     const finalLabelMap: csvDictionary = {}
@@ -221,26 +221,39 @@ export const normalizeCSVFiles = async (pathToCSVs: string[], name: string) => {
     fs.openSync(outFilePath, 'w');
     const finalKeys = Object.keys(deps)
     const headerLine = finalKeys.join(',');
-    fs.appendFileSync(outFilePath, headerLine + '\n')
+    fs.appendFileSync(outFilePath, 'epoch_time,' + headerLine + '\n')
 
     for (const newFile of newFiles) {
-        return new Promise<void>(resolve => {
-            let index = 0
+        await new Promise<void>(resolve => {
             fs.createReadStream(newFile)
                 .pipe(csv())
                 .on('data', (data: csvDictionary) => {
-                    let line = ''
+                    const epoch_time = new Date(data['YEAR']).valueOf()
+                    let line = `${epoch_time},`
                     for(const finalKey of finalKeys){
-
+                        if(data[finalKey]){
+                            line += `${data[finalKey]},`
+                        }
+                        else {
+                            line += `-1,`
+                        }
                     }
-                    for (const [key, value] of Object.entries(data)) {
-                        
-                    }
+                    fs.appendFileSync(outFilePath, line.substr(0, line.length - 1) + '\n');
                 })
                 .on('end', () => { resolve() })
         })
+        await exec(`rm -f ${newFile}`)
     }
 
+    fs.writeFileSync(`./out/${name}_labelMap_${randomRun}.json`, JSON.stringify(Object.entries(finalLabelMap).map(([name,label]) => {
+        return {
+            name,
+            label,
+            hideByDefault: true
+        }
+    }),null,4))
+
+    return outFilePath;
 }
 
 export const getMultiyearCensusFiles = (pathToFolder: string) => {
