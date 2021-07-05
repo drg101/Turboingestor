@@ -4,6 +4,10 @@ import readline = require('readline');
 import { exec } from 'child_process';
 import fetch from 'node-fetch';
 
+interface csvDictionary { [key: string]: string | number }
+interface stringArrayDictionary { [key: string]: string[] }
+interface stringDictionary { [key: string]: string }
+
 export const getFieldsAndValidateCSV = (path: string) => {
     try {
         return new Promise<string[]>(resolve => {
@@ -11,9 +15,9 @@ export const getFieldsAndValidateCSV = (path: string) => {
             let returnFields: string[] = [];
             fs.createReadStream(path)
                 .pipe(csv())
-                .on('data', (data) => { fields = new Set<string>([ ...fields, ...Object.keys(data) ]) })
+                .on('data', (data) => { fields = new Set<string>([...fields, ...Object.keys(data)]) })
                 .on('end', () => {
-                    returnFields = [ ...fields ]
+                    returnFields = [...fields]
                     console.log(`Fields of ${path} are ${returnFields}`);
                     resolve(returnFields);
                 });
@@ -43,7 +47,7 @@ export const execCommand = async (cmd: string) => {
 
 export const exportLabelMap = async (pathToCSV: string, name: string = "defaultName") => {
     console.log(`Creating label map for ${pathToCSV}`)
-    const newFileName = `${pathToCSV.substr(0, pathToCSV.length - 4)}_WITHOUT_DESCRIPTIVE_HEADERS_${Math.random().toString(36).substring(2,6)}_.csv`;
+    const newFileName = `${pathToCSV.substr(0, pathToCSV.length - 4)}_WITHOUT_DESCRIPTIVE_HEADERS_${Math.random().toString(36).substring(2, 6)}_.csv`;
     const labelMap = await popDescriptiveHeaderIntoLabelMap(pathToCSV, newFileName);
     console.log(labelMap)
     fs.writeFileSync(`./out/${name}LabelMap.json`, JSON.stringify(labelMap, null, 4))
@@ -51,11 +55,10 @@ export const exportLabelMap = async (pathToCSV: string, name: string = "defaultN
     return newFileName;
 }
 
-export const exportLabelMapMulti = async (pathToFolder: string, name: string = "defaultName") => {
-    console.log(`Creating label map for ${pathToFolder}`)
-    const filePaths = getMutiyearCensusFiles(pathToFolder).map(async (fileName) => {
-            return await exportLabelMap(`${pathToFolder}/${fileName}`, name)
-        })
+export const exportLabelMapMulti = async (paths: string[], name: string = "defaultName") => {
+    const filePaths = paths.map(async (fileName) => {
+        return await exportLabelMap(fileName, name)
+    })
     return await Promise.all(filePaths);
 }
 
@@ -63,7 +66,7 @@ export const combineMultiyearCensusAndGetFilepath = async (pathsToFiles: string[
     const newFilePath = `./out/${name}_combined_${randomString(4)}.csv`
     fs.openSync(newFilePath, 'w');
     let headerIsOn = false;
-    for(const pathToFile of pathsToFiles){
+    for (const pathToFile of pathsToFiles) {
         const year = await getFirstEntryOfColumnOfCSV(pathToFile, "YEAR")
         const epoch_time = new Date(year).valueOf()
         const fileStream = fs.createReadStream(pathToFile);
@@ -73,7 +76,7 @@ export const combineMultiyearCensusAndGetFilepath = async (pathsToFiles: string[
         });
         let index = 0;
         for await (const line of rl) {
-            if(index !== 0 || !headerIsOn){
+            if (index !== 0 || !headerIsOn) {
                 headerIsOn = true;
                 fs.appendFileSync(newFilePath, `${index === 0 ? "epoch_time" : epoch_time},${line}\n`);
             }
@@ -85,18 +88,81 @@ export const combineMultiyearCensusAndGetFilepath = async (pathsToFiles: string[
 }
 
 const getFirstEntryOfColumnOfCSV = async (pathToCSV: string, columnName: string) => {
-    return new Promise<string|number>(resolve => {
+    return new Promise<string | number>(resolve => {
         const csvStream = fs.createReadStream(pathToCSV)
-                .pipe(csv())
-                .on('data', (data) => { 
-                    csvStream.destroy(); 
-                    resolve(data[columnName])
-                });
+            .pipe(csv())
+            .on('data', (data) => {
+                csvStream.destroy();
+                resolve(data[columnName])
+            });
     })
 }
 
-const getMutiyearCensusFiles = (pathToFolder: string) => {
-    return fs.readdirSync(pathToFolder).filter(fileName => fileName.match(/^.*\.csv$/g) && !fileName.match(/^.*WITHOUT_DESCRIPTIVE_HEADERS.*$/g))
+export const normalizeCSVFiles = async (pathToCSVs: string[]) => {
+    const labelMaps = await Promise.all(pathToCSVs.map(pathToCSV => getDescriptiveHeader(pathToCSV)))
+    let deps: stringArrayDictionary = {}
+    const finalLabelMap: csvDictionary = {}
+    for (const labelMap of labelMaps) {
+        for (const [code, label] of Object.entries(labelMap)) {
+            if (!deps[label]) {
+                deps[label] = [code]
+                finalLabelMap[code] = label;
+            }
+            else {
+                deps[label].push(code)
+            }
+        }
+    }
+
+    deps = Object.entries(deps).reduce((acc: stringArrayDictionary, [label, codes]) => {
+        acc[codes[0]] = codes;
+        return acc;
+    }, {} as stringArrayDictionary)
+
+    const invertedDeps: stringDictionary = Object.entries(deps).reduce((acc: stringDictionary, [masterCode, codes]) => {
+        for(const code of codes){
+            acc[code] = masterCode;
+        }
+        return acc;
+    }, {} as stringDictionary)
+
+
+    let newFiles: string[] = [];
+    const randomRun = randomString(4)
+    for (const pathToCSV of pathToCSVs) {
+        const newFileName = `${pathToCSV.substr(0, pathToCSV.length - 4)}_NORMALIZED_${randomRun}.csv`
+        newFiles.push(newFileName)
+        fs.openSync(newFileName, 'w');
+        const fileStream = fs.createReadStream(pathToCSV);
+        const rl = readline.createInterface({
+            input: fileStream,
+            crlfDelay: Infinity
+        });
+
+        let index = 0;
+        for await (const line of rl) {
+            if (index === 0) {
+                const labelMap = await getDescriptiveHeader(pathToCSV)
+                for(const [key, master] of Object.entries(invertedDeps)){
+
+                }
+            }
+            else if(index === 1){
+                
+            }
+            else {
+                fs.appendFileSync(newFileName, line + '\n');
+            }
+            index++;
+        }
+    }
+
+
+    console.log(invertedDeps)
+}
+
+export const getMultiyearCensusFiles = (pathToFolder: string) => {
+    return fs.readdirSync(pathToFolder).filter(fileName => fileName.match(/^.*\.csv$/g) && !fileName.match(/^.*WITHOUT_DESCRIPTIVE_HEADERS.*$/g)).map(filename => `${pathToFolder}/${filename}`)
 }
 
 export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string, newFileName: string) => {
@@ -108,17 +174,21 @@ export const popDescriptiveHeaderIntoLabelMap = async (pathToCSV: string, newFil
     });
     let index = 0;
     for await (const line of rl) {
-        if(index !== 1){
+        if (index !== 1) {
             //console.log(line + '\n')
             fs.appendFileSync(newFileName, line + '\n');
         }
         index++;
     }
 
+    return await getDescriptiveHeader(pathToCSV)
+}
+
+const getDescriptiveHeader: (pathToCSV: string) => Promise<csvDictionary> = async (pathToCSV: string) => {
     return new Promise(resolve => {
         const readStream = fs.createReadStream(pathToCSV)
             .pipe(csv())
-            .on('data', (data) => { readStream.destroy(); resolve(data); })
+            .on('data', (data: csvDictionary) => { readStream.destroy(); resolve(data); })
     })
 }
 

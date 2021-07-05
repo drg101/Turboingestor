@@ -1,7 +1,7 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
 import ingestNeon from './lib/ingestNeon';
-import { exportLabelMap, exportLabelMapMulti, combineMultiyearCensusAndGetFilepath } from './lib/util' 
+import { exportLabelMap, exportLabelMapMulti, combineMultiyearCensusAndGetFilepath, normalizeCSVFiles, getMultiyearCensusFiles } from './lib/util' 
 
 
 
@@ -23,10 +23,11 @@ import { exportLabelMap, exportLabelMapMulti, combineMultiyearCensusAndGetFilepa
             ingestCensus(name, newFilePath, indexes);
             break;
         case "multiyear_census_w_descriptive_header":
-            const newFilePaths = await exportLabelMapMulti(filepath, name);
-            console.log(newFilePaths)
-            const combinedFilePath = await combineMultiyearCensusAndGetFilepath(newFilePaths, name)
-            ingestCensus(name, combinedFilePath, ["GISJOIN", "epoch_time"]);
+            const files = getMultiyearCensusFiles(filepath)
+            normalizeCSVFiles(files);
+            //const newFilePaths = await exportLabelMapMulti(files, name);
+            //const combinedFilePath = await combineMultiyearCensusAndGetFilepath(newFilePaths, name)
+            //ingestCensus(name, combinedFilePath, ["GISJOIN", "epoch_time"]);
             break;
         case "census":
             ingestCensus(name, filepath, indexes);
