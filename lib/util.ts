@@ -221,6 +221,7 @@ export const normalizeAndCombineCSVFiles = async (pathToCSVs: string[], name: st
     fs.openSync(outFilePath, 'w');
     const finalKeys = Object.keys(deps)
     const headerLine = finalKeys.join(',');
+    console.log(headerLine)
     fs.appendFileSync(outFilePath, 'epoch_time,' + headerLine + '\n')
 
     for (const newFile of newFiles) {
@@ -232,10 +233,10 @@ export const normalizeAndCombineCSVFiles = async (pathToCSVs: string[], name: st
                     let line = `${epoch_time},`
                     for(const finalKey of finalKeys){
                         if(data[finalKey]){
-                            line += `${data[finalKey]},`
+                            line += `${JSON.stringify(data[finalKey]).includes(',') ? `"${data[finalKey]}"` : data[finalKey]},`
                         }
                         else {
-                            line += `-1,`
+                            line += `,`
                         }
                     }
                     fs.appendFileSync(outFilePath, line.substr(0, line.length - 1) + '\n');
