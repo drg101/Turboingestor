@@ -61,4 +61,12 @@
 
 ./build.sh
 
-node build/download.js $1
+case $1 in
+  NEON)
+    node build/downloadNEON.js $2
+    ;;
+
+  COVID)
+    node build/downloadCOVID.js
+    ;;
+esac

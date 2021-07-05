@@ -116,49 +116,6 @@ export const exportLabelMap = async (pathToCSV: string, name: string = "defaultN
     return newFileName;
 }
 
-export const exportLabelMapMulti = async (paths: string[], name: string = "defaultName") => {
-    const filePaths = paths.map(async (fileName) => {
-        return await exportLabelMap(fileName, name)
-    })
-    return await Promise.all(filePaths);
-}
-
-export const combineMultiyearCensusAndGetFilepath = async (pathsToFiles: string[], name: string = "defaultName") => {
-    const newFilePath = `./out/${name}_combined_${randomString(4)}.csv`
-    fs.openSync(newFilePath, 'w');
-    let headerIsOn = false;
-    for (const pathToFile of pathsToFiles) {
-        const year = await getFirstEntryOfColumnOfCSV(pathToFile, "YEAR")
-        const epoch_time = new Date(year).valueOf()
-        const fileStream = fs.createReadStream(pathToFile);
-        const rl = readline.createInterface({
-            input: fileStream,
-            crlfDelay: Infinity
-        });
-        let index = 0;
-        for await (const line of rl) {
-            if (index !== 0 || !headerIsOn) {
-                headerIsOn = true;
-                fs.appendFileSync(newFilePath, `${index === 0 ? "epoch_time" : epoch_time},${line}\n`);
-            }
-            index++;
-        }
-        await execCommand(`rm -f ${pathToFile}`);
-    }
-    return newFilePath;
-}
-
-const getFirstEntryOfColumnOfCSV = async (pathToCSV: string, columnName: string) => {
-    return new Promise<string | number>(resolve => {
-        const csvStream = fs.createReadStream(pathToCSV)
-            .pipe(csv())
-            .on('data', (data) => {
-                csvStream.destroy();
-                resolve(data[columnName])
-            });
-    })
-}
-
 export const normalizeAndCombineCSVFiles = async (pathToCSVs: string[], name: string) => {
     const labelMaps = await Promise.all(pathToCSVs.map(pathToCSV => getDescriptiveHeader(pathToCSV)))
     let deps: stringArrayDictionary = {}
@@ -296,4 +253,8 @@ export const getJSON = async (URL: string) => {
     let response = await fetch(URL);
     let data = await response.json()
     return data;
+}
+
+export const downloadFile = async (filepath: string, url: string) => {
+    await execCommand(`wget -O ${filepath} ${url}`)
 }

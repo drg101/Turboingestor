@@ -62,7 +62,7 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
 import ingestNeon from './lib/ingestNeon';
-import { exportLabelMap, exportLabelMapMulti, combineMultiyearCensusAndGetFilepath, normalizeAndCombineCSVFiles, getMultiyearCensusFiles } from './lib/util' 
+import { exportLabelMap, normalizeAndCombineCSVFiles, getMultiyearCensusFiles } from './lib/util' 
 
 
 
