@@ -59,45 +59,18 @@
  * END OF TERMS AND CONDITIONS
  */
 
-import yargs = require('yargs/yargs');
-import ingestCensus from './lib/ingestCensus';
-import ingestNeon from './lib/ingestNeon';
-import { exportLabelMap, normalizeAndCombineCSVFiles, getMultiyearCensusFiles } from './lib/util' 
-import ingestCSV from './lib/ingestCSV';
+import { getFieldsAndValidateCSV } from './util';
+import { importCSV, createIndexes } from './mongoBindings'  
+import assert = require('assert');
 
+export default async function ingestCSV(collectionName: string, filepath: string, indexes: string[]) {
+    console.log(`Ingesting ${filepath} as a census table. Indexing on [${indexes}]`);
 
-
-(async () => {
-
-    const { format, filepath, indexes, name, table } = await yargs(process.argv.slice(2)).array('indexes').options({
-        format: { type: 'string', requiresArg: true, default: "census" },
-        filepath: { type: 'string', requiresArg: true, demandOption: true },
-        indexes: { type: 'array', default: [] },
-        name: { type: 'string', requiresArg: true, demandOption: true },
-        table: { type: 'string' },
-    }).argv;
-
-
-
-    switch (format) {
-        case "census_w_descriptive_header":
-            const newFilePath = await exportLabelMap(filepath, name);
-            ingestCensus(name, newFilePath, indexes);
-            break;
-        case "multiyear_census_w_descriptive_header":
-            const files = getMultiyearCensusFiles(filepath)
-            const combinedFilepath = await normalizeAndCombineCSVFiles(files, name);
-            ingestCensus(name, combinedFilepath, ["GISJOIN", "epoch_time"]);
-            break;
-        case "census":
-            ingestCensus(name, filepath, indexes);
-            break;
-        case "neon":
-            table && ingestNeon(name, filepath, table);
-            break;
-        case "generic_csv":
-            ingestCSV(name, filepath, indexes)
-            break;
+    const fieldsInCSV = await getFieldsAndValidateCSV(filepath);
+    for (const index of indexes) {
+        assert(fieldsInCSV.includes(index), "Specified index is not in dataset!!!")
     }
-
-})();
+    
+    await importCSV(collectionName, filepath);
+    await createIndexes(collectionName, indexes)
+}
