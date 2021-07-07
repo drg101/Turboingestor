@@ -66,15 +66,15 @@ import yargs = require('yargs/yargs');
 import { neonToken } from './lib/apiTokens'
 import readline = require("readline");
 
-type dictArr = { [ key: string ]: string[] };
+type dictArr = { [key: string]: string[] };
 
-interface resCode { 
+interface resCode {
     [key: string]: {
         title: string,
-        sites: {}[], 
+        sites: {}[],
     }
 };
-type dict = { [ key: string ]: string };
+type dict = { [key: string]: string };
 
 const WAIT_TIME = 650;
 let queueLen = 1;
@@ -89,7 +89,7 @@ const waitForTurn = async () => {
     });
 }
 
-const downloadAndUnzip = async ({month, siteCode, dataProductTitle, dataProductCode, url, out}: dict) => {
+const downloadAndUnzip = async ({ month, siteCode, dataProductTitle, dataProductCode, url, out }: dict) => {
     console.log(`Downloading ${month} for ${siteCode}, ${dataProductTitle}`)
     const zipfile = `${out}/tmp/${siteCode}_${dataProductCode}_${month}.zip`
     console.log(url)
@@ -107,7 +107,7 @@ const getConsoleInput = async (q: string) => {
             input: process.stdin,
             output: process.stdout
         });
-        rl.question(q, function(a) {
+        rl.question(q, function (a) {
             rl.close();
             resolve(a);
         });
@@ -127,64 +127,80 @@ const downloadNeon = async (out: string) => {
     const sites = (await getJSON(`https://data.neonscience.org/api/v0/sites`)).data;
 
     let products = new Set<string>();
+    let months = new Set<string>();
     for (const { siteCode, dataProducts } of sites) {
-        for (const { dataProductTitle } of dataProducts) {
-            products.add(dataProductTitle);
+        for (const { dataProductTitle, availableMonths, dataProductCode } of dataProducts) {
+            products.add(`${dataProductTitle};${dataProductCode}`);
+            for (const availableMonth of availableMonths) {
+                months.add(availableMonth)
+            }
         }
     }
 
     let productsArr: string[] = [...products];
+    let monthsArr: string[] = [...months].sort((a, b) => new Date(a).valueOf() - new Date(b).valueOf())
 
-    fs.writeFileSync(`out/productsInput.json`, JSON.stringify(productsArr, null, 4));
+    fs.writeFileSync(`out/productsInput.json`, JSON.stringify({
+        products: productsArr,
+        months: monthsArr
+    }, null, 4));
     await getConsoleInput("Done editing?");
-    productsArr = JSON.parse(fs.readFileSync(`out/productsInput.json`).toString());
-    console.log(productsArr)
+    const userInput = JSON.parse(fs.readFileSync(`out/productsInput.json`).toString());
+    console.log(userInput)
 
-    for (const { siteCode, dataProducts } of sites) {
-        for (const { dataProductTitle, dataProductCode, availableMonths, availableDataUrls } of dataProducts) {
-            if(!productsArr.includes(dataProductTitle)){
-                continue;
-            }
-            if (!fs.existsSync(`${out}/${dataProductCode}`)) {
-                fs.mkdirSync(`${out}/${dataProductCode}`);
-            }
-            console.log(`Processing ${siteCode}, ${dataProductTitle}`);
-            if(!resCodes[ dataProductCode ]){
-                resCodes[ dataProductCode ] = {
-                    title: dataProductTitle,
-                    sites: [],
-                };
-            }
-            fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
+    productsArr = userInput.products;
+    monthsArr = userInput.months;
 
-            const siteDescriptor = {
-                code: siteCode,
-                files: {} as dictArr
-            };
-
-            let packageDownloadsP: Promise<any>[] = [];
-            for (const availableDataUrl of availableDataUrls) {
-                await waitForTurn();
-                packageDownloadsP.push((getJSON(availableDataUrl)));
-            }
-            const packageDownloads = await Promise.all(packageDownloadsP);
-            console.log(`There are ${packageDownloads.length} packages which will be downloaded.`)
-
-            let zipDownloadsP: Promise<void>[] = [];
-            for (const { data } of packageDownloads) {
-                const { month, packages, files } = data;
-                siteDescriptor.files[`${siteCode}_${month}`] = files;
-                const basicDownload = packages.find((pack: dict) => pack.type === 'basic');
-                if (basicDownload) {
-                    const { url } = basicDownload;
-                    zipDownloadsP.push(downloadAndUnzip({month, siteCode, dataProductTitle, dataProductCode, url, out}));
+    for (const product of productsArr) {
+        for (const { siteCode, dataProducts } of sites) {
+            for (const { dataProductTitle, dataProductCode, availableMonths, availableDataUrls } of dataProducts) {
+                if (`${dataProductTitle};${dataProductCode}` !== product) {
+                    continue;
                 }
-            }
-            await Promise.all(zipDownloadsP);
-            console.log(chalk.green(`Finished downloading all zips for ${siteCode}, ${dataProductTitle}`))
-            resCodes[ dataProductCode ].sites.push(siteDescriptor);
+                if (!fs.existsSync(`${out}/${dataProductCode}`)) {
+                    fs.mkdirSync(`${out}/${dataProductCode}`);
+                }
+                console.log(`Processing ${siteCode}, ${dataProductTitle}`);
+                if (!resCodes[dataProductCode]) {
+                    resCodes[dataProductCode] = {
+                        title: dataProductTitle,
+                        sites: [],
+                    };
+                }
+                fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
 
-            fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
+                const siteDescriptor = {
+                    code: siteCode,
+                    files: {} as dictArr
+                };
+
+                let packageDownloadsP: Promise<any>[] = [];
+                for (const availableDataUrl of availableDataUrls) {
+                    await waitForTurn();
+                    packageDownloadsP.push((getJSON(availableDataUrl)));
+                }
+                const packageDownloads = await Promise.all(packageDownloadsP);
+                console.log(`There are ${packageDownloads.length} packages which will be downloaded.`)
+
+                let zipDownloadsP: Promise<void>[] = [];
+                for (const { data } of packageDownloads) {
+                    const { month, packages, files } = data;
+                    if (!monthsArr.includes(month)) {
+                        continue;
+                    }
+                    siteDescriptor.files[`${siteCode}_${month}`] = files;
+                    const basicDownload = packages.find((pack: dict) => pack.type === 'basic');
+                    if (basicDownload) {
+                        const { url } = basicDownload;
+                        zipDownloadsP.push(downloadAndUnzip({ month, siteCode, dataProductTitle, dataProductCode, url, out }));
+                    }
+                }
+                await Promise.all(zipDownloadsP);
+                console.log(chalk.green(`Finished downloading all zips for ${siteCode}, ${dataProductTitle}`))
+                resCodes[dataProductCode].sites.push(siteDescriptor);
+
+                fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
+            }
         }
     }
 

@@ -197,6 +197,7 @@ const ingestNeon = async (name: string, filepath: string, tableName: string) => 
                             collection: name,
                             icon: "science",
                             temporal: "epoch_time",
+                            source: `https://data.neonscience.org/data-products/${productCode}`,
                             linked: {
                                 collection: "neon_sites",
                                 field: "site"
