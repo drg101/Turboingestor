@@ -283,6 +283,8 @@ const ingestNeon = async (name: string, filepath: string, tableName: string) => 
 
     console.log(`Creating indexes for ${name}`)
     await createIndexes(name, ['site', 'epoch_time']);
+
+    console.log("done")
 }
 
 export default ingestNeon;

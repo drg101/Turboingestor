@@ -152,6 +152,7 @@ const downloadNeon = async (out: string) => {
     monthsArr = userInput.months;
 
     for (const product of productsArr) {
+        try {
         for (const { siteCode, dataProducts } of sites) {
             for (const { dataProductTitle, dataProductCode, availableMonths, availableDataUrls } of dataProducts) {
                 if (`${dataProductTitle};${dataProductCode}` !== product) {
@@ -201,6 +202,10 @@ const downloadNeon = async (out: string) => {
 
                 fs.writeFileSync(`${out}/codes_${rid}.json`, JSON.stringify(resCodes, null, 4));
             }
+        }
+        }
+        catch (e) {
+            console.error(e)
         }
     }
 
