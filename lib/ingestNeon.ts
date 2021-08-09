@@ -196,7 +196,7 @@ const ingestNeon = async (name: string, filepath: string, tableName: string | "a
                                 "properties": {
                                     site: siteID,
                                     collectionName: name,
-                                    name: siteID
+                                    name: site
                                 },
                                 site: siteID
                             }
@@ -273,7 +273,8 @@ const ingestNeon = async (name: string, filepath: string, tableName: string | "a
             }
 
 
-            if (!timeSeriesHeaderIsDone && tsFiles.length) {
+
+            if (tableName !== "allTables" && !timeSeriesHeaderIsDone && tsFiles.length) {
                 console.log(`Adding time series header to out!`)
                 const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFiles[0]}`);
                 const rl = readline.createInterface({
@@ -287,43 +288,78 @@ const ingestNeon = async (name: string, filepath: string, tableName: string | "a
                 timeSeriesHeaderIsDone = true;
             }
 
-            // for (const tsFile of tsFiles) {
-            //     const locationAtSite = locationsForSiteCode.find(loc => {
-            //         const matchStr = `^.*${loc.replace(".", "\.")}\..*\.${tableName}.*$`
-            //         return tsFile.match(new RegExp(matchStr))
-            //     });
+            if (tableName === "allTables") {
+                console.log(tsFiles)
+                console.log(`Adding time series header to out!`)
+                let keySet = new Set();
+                for (const tsFile of tsFiles) {
+                    const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFile}`);
+                    const rl = readline.createInterface({
+                        input: fileStream,
+                        crlfDelay: Infinity
+                    });
+                    for await (const line of rl) {
+                        const keys = line.split(',')
+                        for (const key of keys) {
+                            keySet.add(key)
+                        }
+                        break;
+                    }
+                }
+                const keySetArr = [...keySet]
+                fs.appendFileSync(`./out/${timeSeriesFileName}`, `${keySetArr.join(",")}\n`);
+                
 
-            //     if (!locationAtSite) {
-            //         throw "bad"
-            //     }
-            //     locsWhichAreUsed.add(locationAtSite);
+                //now to collect all of the info
+                let line = `${siteID},${new Date(month).valueOf()},`
+                
+                timeSeriesHeaderIsDone = true;
+            }
+            else {
+                for (const tsFile of tsFiles) {
+                    const locationAtSite = locationsForSiteCode.find(loc => {
+                        const matchStr = `^.*${loc.replace(".", "\.")}\..*\.${tableName}.*$`
+                        return tsFile.match(new RegExp(matchStr))
+                    });
 
-            //     const site = `${siteID}_${locationAtSite}`
-            //     console.log(`Collection epoch times from ${tsFile}`)
-            //     let times: number[] = [];
-            //     await new Promise<void>(resolve => {
-            //         fs.createReadStream(`${filepath}/${fileName}/${tsFile}`)
-            //             .pipe(csv())
-            //             .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
-            //             .on('end', () => { resolve() })
-            //     });
-            //     console.log(`Pasting time series for ${tsFile}`)
-            //     const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFile}`);
-            //     const rl = readline.createInterface({
-            //         input: fileStream,
-            //         crlfDelay: Infinity
-            //     });
-            //     let index = 0;
-            //     for await (const line of rl) {
-            //         if (index !== 0) {
-            //             const time = times.shift();
-            //             !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${site},${time},${line}\n`);
-            //         }
-            //         index++;
-            //     }
-            // }
+                    if (!locationAtSite) {
+                        throw "bad"
+                    }
+                    locsWhichAreUsed.add(locationAtSite);
+
+                    const site = `${siteID}_${locationAtSite}`
+                    console.log(`Collection epoch times from ${tsFile}`)
+                    let times: number[] = [];
+                    await new Promise<void>(resolve => {
+                        fs.createReadStream(`${filepath}/${fileName}/${tsFile}`)
+                            .pipe(csv())
+                            .on('data', (data) => { times.push(new Date(data.startDateTime).valueOf()) })
+                            .on('end', () => { resolve() })
+                    });
+                    console.log(`Pasting time series for ${tsFile}`)
+                    const fileStream = fs.createReadStream(`${filepath}/${fileName}/${tsFile}`);
+                    const rl = readline.createInterface({
+                        input: fileStream,
+                        crlfDelay: Infinity
+                    });
+                    let index = 0;
+                    for await (const line of rl) {
+                        if (index !== 0) {
+                            const time = times.shift();
+                            !line.split(',').includes('') && fs.appendFileSync(`./out/${timeSeriesFileName}`, `${site},${time},${line}\n`);
+                        }
+                        index++;
+                    }
+                }
+            }
         }
-        locationsGeojsonList.push(...geojsonPositionsForSiteCode.filter(location => locsWhichAreUsed.has(location.properties.loc)));
+        if (tableName === "allTables") {
+            locationsGeojsonList.push(...geojsonPositionsForSiteCode);
+        }
+        else {
+            locationsGeojsonList.push(...geojsonPositionsForSiteCode.filter(location => locsWhichAreUsed.has(location.properties.loc)));
+        }
+
         fs.writeFileSync(`./out/${locationsFileName}`, JSON.stringify(locationsGeojsonList, null, 4));
     }
     throw "e"
