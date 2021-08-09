@@ -62,8 +62,9 @@
 import yargs = require('yargs/yargs');
 import ingestCensus from './lib/ingestCensus';
 import ingestNeon from './lib/ingestNeon';
-import { exportLabelMap, normalizeAndCombineCSVFiles, getMultiyearCensusFiles } from './lib/util' 
+import { exportLabelMap, normalizeAndCombineCSVFiles, getMultiyearCensusFiles, execCommand } from './lib/util' 
 import ingestCSV from './lib/ingestCSV';
+import { importJSON, createIndexes, create2dSphereIndex } from './lib/mongoBindings'
 
 
 
@@ -77,7 +78,7 @@ import ingestCSV from './lib/ingestCSV';
         table: { type: 'string' },
     }).argv;
 
-
+    console.log({name, filepath, indexes})
 
     switch (format) {
         case "census_w_descriptive_header":
@@ -97,6 +98,19 @@ import ingestCSV from './lib/ingestCSV';
             break;
         case "generic_csv":
             ingestCSV(name, filepath, indexes)
+            break;
+        case "jsonList":
+            await importJSON(name, filepath)
+            if(indexes) {
+                await createIndexes(name, indexes)
+            }
+            break;
+        case "geojson":
+            const tempFilePath = `./out/${name}_features.json`
+            await execCommand(`jq -c ".features" ${filepath} > ${tempFilePath}`)
+            await importJSON(name, tempFilePath)
+            await create2dSphereIndex(name, "geometry");
+            await execCommand(`rm -f ${tempFilePath}`)
             break;
     }
 

@@ -102,3 +102,17 @@ export const createIndexes = async (collectionName: string, indexes: string[]) =
     })
 }
 
+export const create2dSphereIndex = async (collectionName: string, indexOn: string) => {
+    await new Promise<void>(resolve => {
+        MongoClient.connect(url, async function (err, client) {
+            if (err) {
+                throw `Error connecting to mongodb @${url}`
+            };
+            const db = client.db(dbname);
+            await db.collection(collectionName).createIndex({[indexOn]: "2dsphere"});
+            client.close();
+            resolve();
+        });
+    })
+}
+

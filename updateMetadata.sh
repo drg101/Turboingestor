@@ -76,10 +76,12 @@ sed -i "s/^collection.names=.*$/collection.names=$1/" $propertiesfile
 java -jar ./build/libs/MetadataCatalog-1.0-SNAPSHOT.jar
 
 # this is pretty cute if you ask me.
-> import.js
-echo "use ${mongodb}" >> import.js
-echo "db.${collection}.insert(" >> import.js
-cat metadata.json >> import.js 
-echo ")" >> import.js
-mongo --port $mongoport < import.js
+# > import.js
+# echo "use ${mongodb}" >> import.js
+# echo "db.${collection}.insert(" >> import.js
+# cat metadata.json >> import.js 
+# echo ")" >> import.js
+# mongo --port $mongoport < import.js
+
+mongoimport --port $mongoport --type json -d $mongodb -c $collection --file metadata.json --jsonArray
 cd ..
